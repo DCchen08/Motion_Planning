@@ -1,0 +1,647 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>A_star_search_2</title><meta name="generator" content="MATLAB 9.14"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2023-08-01"><meta name="DC.source" content="A_star_search_2.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="keyword">function</span> path = A_star_search(map,MAX_X,MAX_Y)
+</pre><pre class="codeinput"><span class="comment">%This part is about map/obstacle/and other settings</span>
+    <span class="comment">%pre-process the grid map, add offset</span>
+    size_map = size(map,1);
+    Y_offset = 0;
+    X_offset = 0;
+
+    <span class="comment">%Define the 2D grid map array.</span>
+    <span class="comment">%Obstacle=-1, Target = 0, Start=1</span>
+    MAP=2*(ones(MAX_X,MAX_Y));
+
+    <span class="comment">%Initialize MAP with location of the target &#26368;&#21518;&#19968;&#20010;&#26159;target</span>
+    xval=floor(map(size_map, 1)) + X_offset;
+    yval=floor(map(size_map, 2)) + Y_offset;
+    xTarget=xval;
+    yTarget=yval;
+    MAP(xval,yval)=0;
+
+    <span class="comment">%Initialize MAP with location of the obstacle &#20013;&#38388;&#30340;&#26159;&#38556;&#30861;&#29289;</span>
+    <span class="keyword">for</span> i = 2: size_map-1
+        xval=floor(map(i, 1)) + X_offset;
+        yval=floor(map(i, 2)) + Y_offset;
+        MAP(xval,yval)=-1;
+    <span class="keyword">end</span>
+
+    <span class="comment">%Initialize MAP with location of the start point &#26368;&#21518;&#19968;&#20010;&#26159;&#36215;&#28857;</span>
+    xval=floor(map(1, 1)) + X_offset;
+    yval=floor(map(1, 2)) + Y_offset;
+    xStart=xval;
+    yStart=yval;
+    MAP(xval,yval)=1;
+
+    <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+    <span class="comment">%LISTS USED FOR ALGORITHM</span>
+    <span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+    <span class="comment">%OPEN LIST STRUCTURE</span>
+    <span class="comment">%--------------------------------------------------------------------------</span>
+    <span class="comment">%IS ON LIST 1/0 |X val |Y val |Parent X val |Parent Y val |h(n) |g(n)|f(n)|</span>
+    <span class="comment">%--------------------------------------------------------------------------</span>
+    OPEN=[];
+    <span class="comment">%CLOSED LIST STRUCTURE</span>
+    <span class="comment">%--------------</span>
+    <span class="comment">%X val | Y val |</span>
+    <span class="comment">%--------------</span>
+    <span class="comment">% CLOSED=zeros(MAX_VAL,2);</span>
+    CLOSED=[];
+
+    <span class="comment">%Put all obstacles on the Closed list</span>
+    k=1;<span class="comment">%Dummy counter</span>
+    <span class="keyword">for</span> i=1:MAX_X
+        <span class="keyword">for</span> j=1:MAX_Y
+            <span class="keyword">if</span>(MAP(i,j) == -1)
+                CLOSED(k,1)=i;
+                CLOSED(k,2)=j;
+                k=k+1;
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    CLOSED_COUNT=size(CLOSED,1);
+    <span class="comment">%set the starting node as the first node</span>
+    xNode=xval;
+    yNode=yval;
+    OPEN_COUNT=1;
+    goal_distance=distance(xNode,yNode,xTarget,yTarget);
+    path_cost=0;
+    OPEN(OPEN_COUNT,:)=insert_open(xNode,yNode,xNode,yNode,goal_distance,path_cost,goal_distance);
+    OPEN(OPEN_COUNT,1)=1;
+    CLOSED_COUNT=CLOSED_COUNT+1;
+    CLOSED(CLOSED_COUNT,1)=xNode;
+    CLOSED(CLOSED_COUNT,2)=yNode;
+    NoPath=1;
+
+
+
+    STORRING_OPEN = [];
+    STORRING_OPEN_CNT = 1;
+
+    get_xNode_Open = 2;
+    get_yNode_Open = 3;
+    get_parent_xNode_Open = 4;
+    get_parent_yNode_Open = 5;
+    get_h_Open = 6;
+    get_g_Open = 7;
+    get_f_OPen = 8;
+
+    get_scanning_xNode_expand = 1;
+    get_scanning_yNode_expand = 2;
+    get_scanning_h_expand = 3;
+    get_scanning_g_expand = 4;
+    get_scanning_f_expand = 5;
+</pre><pre class="codeoutput error">&#36755;&#20837;&#21442;&#25968;&#30340;&#25968;&#30446;&#19981;&#36275;&#12290;
+
+&#20986;&#38169; A_star_search_2 (&#31532; 5 &#34892;)
+    size_map = size(map,1);
+</pre><pre class="codeinput"><span class="comment">%This part is your homework</span>
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">% START ALGORITHM</span>
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+    path_1 = [xStart,yStart];
+    Path_Cnt = 1;
+
+
+
+    <span class="keyword">while</span>(~isempty(OPEN)) <span class="comment">%you have to dicide the Conditions for while loop exit finish the while loop</span>
+       row = size(OPEN,1);
+       i_min = min_fn(OPEN,row,xTarget,yTarget);
+       <span class="keyword">if</span> i_min == -1
+           path = [];
+           fprintf(<span class="string">"No road to go\n"</span>)
+           <span class="keyword">return</span>
+       <span class="keyword">end</span>
+
+
+
+       <span class="comment">% Getting the OPEN array which is the smallest in the Whole Open</span>
+       <span class="comment">% List</span>
+       current_smallest_OPEN_Node = OPEN(i_min,:);                       <span class="comment">% Array</span>
+       current_x = current_smallest_OPEN_Node(get_xNode_Open);           <span class="comment">% Current Node X</span>
+       current_y = current_smallest_OPEN_Node(get_yNode_Open);           <span class="comment">% Current Node Y</span>
+       parent_x  = current_smallest_OPEN_Node(get_parent_xNode_Open);    <span class="comment">% Current Parent X of Node X</span>
+       parent_y  = current_smallest_OPEN_Node(get_parent_yNode_Open);    <span class="comment">% Current Parent Y of Node Y</span>
+       current_h = current_smallest_OPEN_Node(get_h_Open);               <span class="comment">% Current Euler distance</span>
+       current_g = current_smallest_OPEN_Node(get_g_Open);               <span class="comment">% Current Cost</span>
+       current_f = current_smallest_OPEN_Node(get_f_OPen);               <span class="comment">% Current Heuristic Number</span>
+
+       <span class="comment">% Storing All the NODE with smallest f</span>
+       STORRING_OPEN(STORRING_OPEN_CNT,:) = OPEN(i_min,:);
+       STORRING_OPEN_CNT = STORRING_OPEN_CNT + 1;
+       STORRING_OPEN;
+
+
+
+       <span class="comment">% Remove the Current Node</span>
+       OPEN(i_min,:) = [];
+       CLOSED_COUNT = CLOSED_COUNT + 1;
+       CLOSED(CLOSED_COUNT,1) = current_x;
+       CLOSED(CLOSED_COUNT,2) = current_y;
+       CLOSED_COUNT = CLOSED_COUNT + 1;
+       CLOSED(CLOSED_COUNT,1) = parent_x;
+       CLOSED(CLOSED_COUNT,2) = parent_y;
+
+
+
+
+
+       <span class="comment">% Storring Path</span>
+       <span class="comment">% scanning the destination</span>
+       <span class="keyword">if</span> (current_x == xTarget &amp;&amp; current_y == yTarget)
+           Path_Cnt = Path_Cnt + 1;
+           path_1(Path_Cnt,:) = [current_x,current_y];
+
+           node_current = [current_x,current_y];     <span class="comment">%storring end point</span>
+           start_node   = [xStart,yStart];           <span class="comment">%storring start point</span>
+
+           parent_node_in_store  = [STORRING_OPEN(:,get_parent_xNode_Open),STORRING_OPEN(:,get_parent_yNode_Open)];
+           current_node_in_store = [STORRING_OPEN(:,get_xNode_Open),STORRING_OPEN(:,get_yNode_Open)];
+
+           path = [current_x,current_y];
+           path_cnt_out = 1;
+
+           <span class="keyword">while</span>(~isequal(node_current,start_node))
+               location_in_store = ismember(current_node_in_store,node_current,<span class="string">"rows"</span>);
+               [rowIndex_in_store,~] = find(location_in_store);
+               node_current = [STORRING_OPEN(rowIndex_in_store,get_parent_xNode_Open),STORRING_OPEN(rowIndex_in_store,get_parent_yNode_Open)];
+               path_cnt_out = path_cnt_out + 1;
+               path(path_cnt_out,:) = node_current
+           <span class="keyword">end</span>
+
+           fprintf(<span class="string">"SUCCESS\n"</span>)
+           <span class="keyword">return</span>
+       <span class="keyword">end</span>
+       path_x = current_x;
+       path_y = current_y;
+       path_node = [path_x,path_y];
+       <span class="keyword">if</span>(~any(ismember(path_1,path_node,<span class="string">"rows"</span>)))
+           Path_Cnt = Path_Cnt + 1;
+           path_1(Path_Cnt,:) = [path_x,path_y];
+       <span class="keyword">end</span>
+
+       <span class="comment">%fprintf("path is %0.2f and yNode is %0.2f.\n",path(Path_Cnt,1),path(Path_Cnt,2))</span>
+
+
+
+
+       <span class="comment">% Expand the current Open Array from current_x and current_y</span>
+       expand_array_list = expand_array(current_x,current_y,current_g,xTarget,yTarget,CLOSED,MAX_X,MAX_Y);
+
+       <span class="comment">% Looping for all expand_array_list</span>
+       <span class="keyword">for</span> index_expand_array_list = 1:1:size(expand_array_list,1)
+           scanning_node = expand_array_list(index_expand_array_list,:);
+           scanning_x = scanning_node(get_scanning_xNode_expand);
+           scanning_y = scanning_node(get_scanning_yNode_expand);
+           scanning_h = scanning_node(get_scanning_h_expand);
+           scanning_g = scanning_node(get_scanning_g_expand);
+           scanning_f = scanning_node(get_scanning_f_expand);
+
+           <span class="comment">% Check if scanning node already in the OPEN List</span>
+           scanning_node_location      = [scanning_x,scanning_y];
+           OPEN_List_ALL_Node_Location = [OPEN(:,get_xNode_Open) OPEN(:,get_yNode_Open)];
+           location = ismember(OPEN_List_ALL_Node_Location,scanning_node_location,<span class="string">"rows"</span>);
+
+           <span class="comment">% get the row of it</span>
+           [rowIndex_SameNode,~] = find(location);
+           OPEN_In_List_xNode = OPEN(rowIndex_SameNode,get_xNode_Open);
+           OPEN_In_List_yNode = OPEN(rowIndex_SameNode,get_yNode_Open);
+
+
+           <span class="comment">%fprintf("Scanning_g is %0.2f and Current_g is %0.2f\n",scanning_g,current_g);</span>
+           fprintf(<span class="string">"I am starting scanning from %0.2f and %0.2f.\n"</span>,current_x,current_y);
+           fprintf(<span class="string">"The scanning node is %0.2f and %0.2f\n"</span>,scanning_x,scanning_y);
+           fprintf(<span class="string">"The g used to in list is %0.2f and %0.2f. \n"</span>,OPEN_In_List_xNode,OPEN_In_List_yNode);
+
+
+
+           <span class="comment">% If We have not check this node</span>
+           <span class="keyword">if</span> (~any(ismember(OPEN_List_ALL_Node_Location,scanning_node_location,<span class="string">"rows"</span>)))
+
+               fprintf(<span class="string">"Did not find same node here\n"</span>)
+               OPEN_COUNT = OPEN_COUNT + 1;
+               OPEN(OPEN_COUNT,:) = insert_open(scanning_x, <span class="keyword">...</span>
+                                                scanning_y, <span class="keyword">...</span>
+                                                current_x, <span class="keyword">...</span>
+                                                current_y, <span class="keyword">...</span>
+                                                scanning_h, <span class="keyword">...</span>
+                                                scanning_g, <span class="keyword">...</span>
+                                                scanning_f);
+
+               <span class="comment">%fprintf("h is %0.2f and g is %0.2f and f is %0.2f. \n",current_h,current_g,current_f)</span>
+               <span class="comment">%fprintf("new h is %0.2f and new g is %0.2f and new f is %0.2f in New Node. \n\n\n\n",scanning_h,scanning_g,scanning_f)</span>
+
+
+
+
+
+
+           <span class="keyword">elseif</span> (scanning_g &lt;= OPEN(rowIndex_SameNode,get_g_Open))
+               <span class="comment">% finding the same node location</span>
+               <span class="comment">%fprintf("Find the Same Node here. \n");</span>
+
+               location = ismember(OPEN_List_ALL_Node_Location,scanning_node_location,<span class="string">"rows"</span>);
+               <span class="comment">% get the row of it</span>
+               [rowIndex_SameNode,~] = find(location);
+               <span class="comment">% OPEN_In_List_xNode = OPEN(rowIndex_SameNode,get_xNode_Open);</span>
+               <span class="comment">% OPEN_In_List_yNode = OPEN(rowIndex_SameNode,get_yNode_Open);</span>
+               <span class="comment">% OPEN_IN_List_g = OPEN(rowIndex_SameNode,get_g_Open);</span>
+               <span class="comment">% OPEN_IN_List_f = OPEN(rowIndex_SameNode,get_f_OPen);</span>
+               <span class="comment">%fprintf("Old h is %0.2f, Old g is %0.2f and Old f is %0.2f. \n",current_h,current_g,current_f)</span>
+               <span class="comment">%fprintf("New h is %0.2f, New g is %0.2f and New f is %0.2f. \n\n\n\n",scanning_h,scanning_g,scanning_f)</span>
+               <span class="comment">%Update the newest cost and heutic value</span>
+               OPEN(rowIndex_SameNode,get_h_Open) = scanning_h;
+               OPEN(rowIndex_SameNode,get_g_Open) = scanning_g;
+               OPEN(rowIndex_SameNode,get_f_OPen) = scanning_h + scanning_g;
+               <span class="keyword">continue</span>;
+
+           <span class="keyword">else</span>
+               path = [];
+               fprintf(<span class="string">"No Road to Go.\n"</span>)
+           <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+
+
+
+    <span class="keyword">end</span> <span class="comment">%End of While Loop</span>
+    path = [];
+</pre><pre class="codeinput">    <span class="keyword">end</span>
+
+
+        <span class="comment">%Once algorithm has run The optimal path is generated by starting of at the</span>
+        <span class="comment">%last node(if it is the target node) and then identifying its parent node</span>
+        <span class="comment">%until it reaches the start node.This is the optimal path</span>
+
+        <span class="comment">%</span>
+        <span class="comment">%How to get the optimal path after A_star search?</span>
+        <span class="comment">% &#39318;&#20808;&#23558;OPEN List &#21644; Close List &#21021;&#22987;&#21270; &#22312;&#31532;&#19968;&#20010;for loop&#20013;&#65306;</span>
+            <span class="comment">% &#39318;&#20808;&#23547;&#25214;&#26368;&#23567;&#30340; f &#28857;</span>
+            <span class="comment">% &#35760;&#24405;&#24182;&#21024;&#38500;&#27492;&#28857;</span>
+            <span class="comment">% &#23558;&#36825;&#20010;&#28857;&#23637;&#24320;&#23547;&#25214;</span>
+            <span class="comment">% &#29992;for loop&#25226;&#25152;&#26377;&#28857;&#32463;&#36807;&#19968;&#27425;</span>
+                <span class="comment">%&#22914;&#26524;&#27492;&#28857;&#27809;&#21435;&#36807;&#35760;&#24405;&#24182;&#26356;&#26032;</span>
+                <span class="comment">%&#22914;&#26524;&#35789;&#20856;&#21435;&#36807;&#20445;&#30041;&#26356;&#22909;&#36335;&#24452;</span>
+            <span class="comment">% &#25214;&#21040;&#32456;&#28857;&#21518;&#22238;&#28335;</span>
+        <span class="comment">%please finish it</span>
+        <span class="comment">%</span>
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2023a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+function path = A_star_search(map,MAX_X,MAX_Y)
+%%
+%This part is about map/obstacle/and other settings
+    %pre-process the grid map, add offset
+    size_map = size(map,1);
+    Y_offset = 0;
+    X_offset = 0;
+    
+    %Define the 2D grid map array.
+    %Obstacle=-1, Target = 0, Start=1
+    MAP=2*(ones(MAX_X,MAX_Y));
+    
+    %Initialize MAP with location of the target 最后一个是target
+    xval=floor(map(size_map, 1)) + X_offset;
+    yval=floor(map(size_map, 2)) + Y_offset;
+    xTarget=xval;
+    yTarget=yval;
+    MAP(xval,yval)=0;
+    
+    %Initialize MAP with location of the obstacle 中间的是障碍物
+    for i = 2: size_map-1
+        xval=floor(map(i, 1)) + X_offset;
+        yval=floor(map(i, 2)) + Y_offset;
+        MAP(xval,yval)=-1;
+    end 
+    
+    %Initialize MAP with location of the start point 最后一个是起点
+    xval=floor(map(1, 1)) + X_offset;
+    yval=floor(map(1, 2)) + Y_offset;
+    xStart=xval;
+    yStart=yval;
+    MAP(xval,yval)=1;
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %LISTS USED FOR ALGORITHM
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %OPEN LIST STRUCTURE
+    %REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH
+    %IS ON LIST 1/0 |X val |Y val |Parent X val |Parent Y val |h(n) |g(n)|f(n)|
+    %REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH
+    OPEN=[];
+    %CLOSED LIST STRUCTURE
+    %REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH
+    %X val | Y val |
+    %REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH
+    % CLOSED=zeros(MAX_VAL,2);
+    CLOSED=[];
+
+    %Put all obstacles on the Closed list
+    k=1;%Dummy counter
+    for i=1:MAX_X
+        for j=1:MAX_Y
+            if(MAP(i,j) == -1)
+                CLOSED(k,1)=i;
+                CLOSED(k,2)=j;
+                k=k+1;
+            end
+        end
+    end
+    CLOSED_COUNT=size(CLOSED,1);
+    %set the starting node as the first node
+    xNode=xval;
+    yNode=yval;
+    OPEN_COUNT=1;
+    goal_distance=distance(xNode,yNode,xTarget,yTarget);
+    path_cost=0;
+    OPEN(OPEN_COUNT,:)=insert_open(xNode,yNode,xNode,yNode,goal_distance,path_cost,goal_distance);
+    OPEN(OPEN_COUNT,1)=1;
+    CLOSED_COUNT=CLOSED_COUNT+1;
+    CLOSED(CLOSED_COUNT,1)=xNode;
+    CLOSED(CLOSED_COUNT,2)=yNode;
+    NoPath=1;
+
+
+
+    STORRING_OPEN = [];
+    STORRING_OPEN_CNT = 1;
+
+    get_xNode_Open = 2;
+    get_yNode_Open = 3;
+    get_parent_xNode_Open = 4;
+    get_parent_yNode_Open = 5;
+    get_h_Open = 6;
+    get_g_Open = 7;
+    get_f_OPen = 8;
+
+    get_scanning_xNode_expand = 1;
+    get_scanning_yNode_expand = 2;
+    get_scanning_h_expand = 3;
+    get_scanning_g_expand = 4;
+    get_scanning_f_expand = 5;
+
+
+%%
+%This part is your homework
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% START ALGORITHM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    path_1 = [xStart,yStart];
+    Path_Cnt = 1;
+
+    
+
+    while(~isempty(OPEN)) %you have to dicide the Conditions for while loop exit finish the while loop
+       row = size(OPEN,1);
+       i_min = min_fn(OPEN,row,xTarget,yTarget);
+       if i_min == -1
+           path = [];
+           fprintf("No road to go\n")
+           return 
+       end
+
+       
+       
+       % Getting the OPEN array which is the smallest in the Whole Open
+       % List
+       current_smallest_OPEN_Node = OPEN(i_min,:);                       % Array
+       current_x = current_smallest_OPEN_Node(get_xNode_Open);           % Current Node X
+       current_y = current_smallest_OPEN_Node(get_yNode_Open);           % Current Node Y
+       parent_x  = current_smallest_OPEN_Node(get_parent_xNode_Open);    % Current Parent X of Node X
+       parent_y  = current_smallest_OPEN_Node(get_parent_yNode_Open);    % Current Parent Y of Node Y
+       current_h = current_smallest_OPEN_Node(get_h_Open);               % Current Euler distance
+       current_g = current_smallest_OPEN_Node(get_g_Open);               % Current Cost
+       current_f = current_smallest_OPEN_Node(get_f_OPen);               % Current Heuristic Number
+
+       % Storing All the NODE with smallest f
+       STORRING_OPEN(STORRING_OPEN_CNT,:) = OPEN(i_min,:);
+       STORRING_OPEN_CNT = STORRING_OPEN_CNT + 1;
+       STORRING_OPEN;
+
+
+
+       % Remove the Current Node
+       OPEN(i_min,:) = [];
+       CLOSED_COUNT = CLOSED_COUNT + 1;
+       CLOSED(CLOSED_COUNT,1) = current_x;
+       CLOSED(CLOSED_COUNT,2) = current_y;
+       CLOSED_COUNT = CLOSED_COUNT + 1;
+       CLOSED(CLOSED_COUNT,1) = parent_x;
+       CLOSED(CLOSED_COUNT,2) = parent_y;
+
+
+       
+    
+
+       % Storring Path
+       % scanning the destination
+       if (current_x == xTarget && current_y == yTarget)
+           Path_Cnt = Path_Cnt + 1;
+           path_1(Path_Cnt,:) = [current_x,current_y];
+           
+           node_current = [current_x,current_y];     %storring end point
+           start_node   = [xStart,yStart];           %storring start point
+
+           parent_node_in_store  = [STORRING_OPEN(:,get_parent_xNode_Open),STORRING_OPEN(:,get_parent_yNode_Open)];
+           current_node_in_store = [STORRING_OPEN(:,get_xNode_Open),STORRING_OPEN(:,get_yNode_Open)];
+
+           path = [current_x,current_y];
+           path_cnt_out = 1;
+
+           while(~isequal(node_current,start_node))
+               location_in_store = ismember(current_node_in_store,node_current,"rows");
+               [rowIndex_in_store,~] = find(location_in_store);
+               node_current = [STORRING_OPEN(rowIndex_in_store,get_parent_xNode_Open),STORRING_OPEN(rowIndex_in_store,get_parent_yNode_Open)];
+               path_cnt_out = path_cnt_out + 1;
+               path(path_cnt_out,:) = node_current
+           end
+
+           fprintf("SUCCESS\n")
+           return
+       end
+       path_x = current_x;
+       path_y = current_y;
+       path_node = [path_x,path_y];
+       if(~any(ismember(path_1,path_node,"rows")))
+           Path_Cnt = Path_Cnt + 1;
+           path_1(Path_Cnt,:) = [path_x,path_y];
+       end
+       
+       %fprintf("path is %0.2f and yNode is %0.2f.\n",path(Path_Cnt,1),path(Path_Cnt,2))
+       
+
+       
+
+       % Expand the current Open Array from current_x and current_y
+       expand_array_list = expand_array(current_x,current_y,current_g,xTarget,yTarget,CLOSED,MAX_X,MAX_Y);
+
+       % Looping for all expand_array_list
+       for index_expand_array_list = 1:1:size(expand_array_list,1)
+           scanning_node = expand_array_list(index_expand_array_list,:);
+           scanning_x = scanning_node(get_scanning_xNode_expand);
+           scanning_y = scanning_node(get_scanning_yNode_expand);
+           scanning_h = scanning_node(get_scanning_h_expand);
+           scanning_g = scanning_node(get_scanning_g_expand);
+           scanning_f = scanning_node(get_scanning_f_expand);
+
+           % Check if scanning node already in the OPEN List
+           scanning_node_location      = [scanning_x,scanning_y];
+           OPEN_List_ALL_Node_Location = [OPEN(:,get_xNode_Open) OPEN(:,get_yNode_Open)];
+           location = ismember(OPEN_List_ALL_Node_Location,scanning_node_location,"rows");
+
+           % get the row of it
+           [rowIndex_SameNode,~] = find(location);
+           OPEN_In_List_xNode = OPEN(rowIndex_SameNode,get_xNode_Open);
+           OPEN_In_List_yNode = OPEN(rowIndex_SameNode,get_yNode_Open);
+
+
+           %fprintf("Scanning_g is %0.2f and Current_g is %0.2f\n",scanning_g,current_g);
+           fprintf("I am starting scanning from %0.2f and %0.2f.\n",current_x,current_y);
+           fprintf("The scanning node is %0.2f and %0.2f\n",scanning_x,scanning_y);
+           fprintf("The g used to in list is %0.2f and %0.2f. \n",OPEN_In_List_xNode,OPEN_In_List_yNode);
+
+           
+
+           % If We have not check this node
+           if (~any(ismember(OPEN_List_ALL_Node_Location,scanning_node_location,"rows")))
+           
+               fprintf("Did not find same node here\n")
+               OPEN_COUNT = OPEN_COUNT + 1;
+               OPEN(OPEN_COUNT,:) = insert_open(scanning_x, ...
+                                                scanning_y, ...
+                                                current_x, ...
+                                                current_y, ...
+                                                scanning_h, ...
+                                                scanning_g, ...
+                                                scanning_f);
+
+               %fprintf("h is %0.2f and g is %0.2f and f is %0.2f. \n",current_h,current_g,current_f)
+               %fprintf("new h is %0.2f and new g is %0.2f and new f is %0.2f in New Node. \n\n\n\n",scanning_h,scanning_g,scanning_f)
+               
+
+
+           
+
+
+           elseif (scanning_g <= OPEN(rowIndex_SameNode,get_g_Open))
+               % finding the same node location
+               %fprintf("Find the Same Node here. \n");
+
+               location = ismember(OPEN_List_ALL_Node_Location,scanning_node_location,"rows");
+               % get the row of it
+               [rowIndex_SameNode,~] = find(location);
+               % OPEN_In_List_xNode = OPEN(rowIndex_SameNode,get_xNode_Open);
+               % OPEN_In_List_yNode = OPEN(rowIndex_SameNode,get_yNode_Open);
+               % OPEN_IN_List_g = OPEN(rowIndex_SameNode,get_g_Open);
+               % OPEN_IN_List_f = OPEN(rowIndex_SameNode,get_f_OPen);
+               %fprintf("Old h is %0.2f, Old g is %0.2f and Old f is %0.2f. \n",current_h,current_g,current_f)
+               %fprintf("New h is %0.2f, New g is %0.2f and New f is %0.2f. \n\n\n\n",scanning_h,scanning_g,scanning_f)
+               %Update the newest cost and heutic value
+               OPEN(rowIndex_SameNode,get_h_Open) = scanning_h;
+               OPEN(rowIndex_SameNode,get_g_Open) = scanning_g;
+               OPEN(rowIndex_SameNode,get_f_OPen) = scanning_h + scanning_g;
+               continue;
+           
+           else
+               path = [];
+               fprintf("No Road to Go.\n")
+           end
+        end
+
+
+
+
+    end %End of While Loop
+    path = [];
+
+
+
+
+    end 
+    
+        
+        %Once algorithm has run The optimal path is generated by starting of at the
+        %last node(if it is the target node) and then identifying its parent node
+        %until it reaches the start node.This is the optimal path
+        
+        %
+        %How to get the optimal path after A_star search?
+        % 首先将OPEN List 和 Close List 初始化 在第一个for loop中：
+            % 首先寻找最小的 f 点
+            % 记录并删除此点
+            % 将这个点展开寻找
+            % 用for loop把所有点经过一次
+                %如果此点没去过记录并更新
+                %如果词典去过保留更好路径
+            % 找到终点后回溯
+        %please finish it
+        %
+       
+
+##### SOURCE END #####
+--></body></html>
